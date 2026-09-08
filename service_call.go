@@ -23,8 +23,8 @@ const (
 	pendingLEDMask = 255
 
 	// Required explicit input also fails closed on hosts that ignore ManualOnly.
-	requestJobSchema     = `{"type":"object","properties":{"confirm":{"type":"boolean","const":true,"title":"Confirm creation of a service call"},"note":{"type":"string","maxLength":256,"title":"Request note (optional)"}},"required":["confirm"],"additionalProperties":false}`
-	acknowledgeJobSchema = `{"type":"object","properties":{"request_id":{"type":"string","minLength":1,"maxLength":128,"pattern":"^\\S+$","title":"Exact pending request ID"}},"required":["request_id"],"additionalProperties":false}`
+	requestJobSchema     = `{"type":"object","properties":{"confirm":{"type":"boolean","const":true,"title":"确认发起呼叫"},"note":{"type":"string","maxLength":256,"title":"请求说明（可选）"}},"required":["confirm"],"additionalProperties":false}`
+	acknowledgeJobSchema = `{"type":"object","properties":{"request_id":{"type":"string","minLength":1,"maxLength":128,"pattern":"^\\S+$","title":"待处理请求编号","description":"使用发起呼叫返回的 request_id；不会确认其它请求。"}},"required":["request_id"],"additionalProperties":false}`
 )
 
 // A business acknowledgement and an actuator result are different facts.
@@ -567,4 +567,36 @@ func (st *instanceState) addCallSummary(body map[string]any) {
 	if cmd := st.calls.commands[st.calls.lastIndicatorID]; cmd != nil {
 		body["indicator"] = cmd.result
 	}
+}
+
+// Human-readable presentation stays with the business plugin. Core renders
+// title/summary generically and does not maintain a domain-status dictionary.
+func (r *callRecord) MarshalJSON() ([]byte, error) {
+	type fields callRecord
+	summary := "等待人工确认；指示灯："
+	result := r.IndicatorOn
+	if r.Status == "acknowledged" {
+		summary = "已人工确认；解除指示灯："
+		result = r.IndicatorOff
+	}
+	label := "尚未请求"
+	if result != nil {
+		switch result.State {
+		case "succeeded":
+			label = "设备已回执"
+		case "awaiting_result":
+			label = "等待设备回执"
+		case "failed", "timed_out", "cancelled":
+			label = "未成功，请检查设备"
+		case "result_timeout", "delivery_unknown":
+			label = "结果未知，请核对设备"
+		default:
+			label = "尚未完成"
+		}
+	}
+	return json.Marshal(struct {
+		*fields
+		Title   string `json:"title"`
+		Summary string `json:"summary"`
+	}{(*fields)(r), "工位呼叫", summary + label})
 }

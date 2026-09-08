@@ -154,8 +154,8 @@ func (s *Service) Describe(context.Context) (*application.ApplicationDescriptor,
 		},
 		Jobs: []application.JobDescriptor{
 			{ID: jobBootstrap, Title: "Register declarative schedules", InputSchemaJSON: "{}"},
-			{ID: jobRequest, Title: "Request service (turn on pending indicator)", InputSchemaJSON: requestJobSchema, ManualOnly: true},
-			{ID: jobAcknowledge, Title: "Acknowledge service call by request ID (turn off indicator)", InputSchemaJSON: acknowledgeJobSchema, ManualOnly: true},
+			{ID: jobRequest, Title: "发起呼叫", InputSchemaJSON: requestJobSchema, ManualOnly: true},
+			{ID: jobAcknowledge, Title: "确认并解除提示", InputSchemaJSON: acknowledgeJobSchema, ManualOnly: true},
 		},
 		DeclarativeOnly: false,
 	}, nil
